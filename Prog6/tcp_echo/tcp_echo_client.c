@@ -1,47 +1,56 @@
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <arpa/inet.h>
+#include<stdio.h>
+#include<stdlib.h>
+  #include <unistd.h>
+#include<string.h>
+ #include <arpa/inet.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<errno.h>
 
-void str_cli(FILE *fp, int sockfd)
+
+#define MAXLINE 1000
+#define SERV_PORT 9002
+
+void  str_cli(FILE *fp, int sockfd)
 {
-	int bufsize = 1024;
-	char *buffer = malloc(bufsize);
-
-	while (fgets(buffer, bufsize, fp) != NULL)
+	char sendline[MAXLINE], recvline[MAXLINE];
+	while (fgets(sendline, MAXLINE, fp))
 	{
-		send(sockfd, buffer, sizeof(buffer), 0);  
-		if (recv(sockfd, buffer, bufsize, 0) > 0) 
-	    		fputs(buffer, stdout);
+
+	write(sockfd, sendline, strlen(sendline));
+
+	if (read(sockfd, recvline, MAXLINE) == 0)
+	{
+
+		 perror("str_cli: server terminated prematurely");
+		  exit(EXIT_FAILURE);
 	}
 	
-	printf("\nEOF\n");
-	
-	free(buffer);
+	fputs(recvline, stdout);
+	}
 }
 
 
-int main(int argc,char *argv[])
+int main(int argc, char **argv)
 {
-	int create_socket;
-	struct sockaddr_in address;
-	
-	if ((create_socket = socket(AF_INET,SOCK_STREAM,0)) > 0)
-		printf("The socket was created\n");
-		
-	address.sin_family = AF_INET;
-	address.sin_port = htons(15001);			
-	inet_pton(AF_INET, argv[1], &address.sin_addr);	
-	
-	if (connect(create_socket, (struct sockaddr *)&address, sizeof(address)) == 0)
-		printf("The connection was accepted with the server %s...\n",argv[1]);
-	else
-		printf("Error in connect\n");			
-		
-	str_cli(stdin, create_socket);				
+	int sockfd;
+	struct sockaddr_in servaddr;
 
-	return close(create_socket);
+	if (argc != 2)
+	{
+		perror("usage: tcpcli <IPaddress>");
+		 exit(EXIT_FAILURE);
+	}
+	
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	
+	bzero(&servaddr, sizeof(servaddr));
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_port = htons(SERV_PORT);
+	inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
+	
+	connect(sockfd, (struct sockaddr*) &servaddr, sizeof(servaddr));
+	str_cli(stdin, sockfd); /* do it all */
+	exit(0);
 }
