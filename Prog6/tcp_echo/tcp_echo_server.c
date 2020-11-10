@@ -1,71 +1,60 @@
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <arpa/inet.h>
+#include<stdio.h>
+#include<stdlib.h>
+  #include <unistd.h>
+#include<string.h>
+ #include <arpa/inet.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<errno.h>
 
-void str_echo(int connfd)			
+#define SERV_PORT 9002
+#define LISTENQ 1024
+void str_echo(int sockfd)
 {
-	int n;
-	int bufsize = 1024;
-	char *buffer = malloc(bufsize);
-again: 
-	while((n = recv(connfd, buffer, bufsize, 0)) > 0)
-		send(connfd,buffer,n,0);
-		
-	if(n < 0)
-		goto again;	
-		
-	free(buffer);
-}
-
-int main()
-{
-	int listenfd, connfd, addrlen, pid, addrlen3;
-	struct sockaddr_in address, cli_address;		
-	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) > 0) 
-		printf("The socket was created\n");
-		
-	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = INADDR_ANY;		
-	address.sin_port = htons(15001);
+	ssize_t n;
+	char buf[1000];
 	
-	printf("The address before bind %s ...\n", inet_ntoa(address.sin_addr));
+	again:
 	
-	if (bind(listenfd, (struct sockaddr *)&address, sizeof(address)) == 0)
-		printf("Binding Socket\n");
-		
-	printf("The address after bind %s ...\n",inet_ntoa(address.sin_addr)); 
-
-	listen(listenfd, 3);			
-	printf("Server is listening\n");
-
-	getsockname(listenfd, (struct sockaddr *)&address, &addrlen3);
-	printf("The server's local address %s ... and port %d\n", inet_ntoa(address.sin_addr), htons(address.sin_port));
-	
-	for(;;)				
+	while ( (n = read(sockfd, buf, 1000)) > 0)
 	{
-		addrlen = sizeof(struct sockaddr_in);
-		connfd = accept(listenfd, (struct sockaddr *)&cli_address, &addrlen);
-		int i = getpeername(connfd,(struct sockaddr *)&cli_address,&addrlen);
-		
-		if (connfd > 0)
-			printf("The Client  %s is connected ... on port %d\n", inet_ntoa(cli_address.sin_addr), htons(cli_address.sin_port));	
-
-		if ((pid = fork()) == 0)
-		{
-			printf("inside child\n");
-			close(listenfd);		
-			str_echo(connfd);		
-			exit(0);
-		}
-
-		close(connfd);				
+		write(sockfd, buf, n);
+		memset(buf,'\0',strlen(buf));
 	}
 	
-	return 0 ;
+	if (n < 0 && errno == EINTR)
+		goto again;
+	else if (n < 0)
+		perror("str_echo: read error");
+}
+
+
+int main(int argc, char **argv)
+{
+	int listenfd, connfd;
+	id_t childpid;
+	socklen_t clilen;
+	struct sockaddr_in cliaddr, servaddr;
+	
+	listenfd = socket(AF_INET, SOCK_STREAM, 0);
+	
+	bzero(&servaddr, sizeof(servaddr));
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	servaddr.sin_port = htons(SERV_PORT);
+	
+	bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+	listen(listenfd, LISTENQ);
+	
+	for ( ; ; ) {
+		clilen = sizeof(cliaddr);
+		connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen);
+		if ( (childpid = fork()) == 0) { /* child process */
+			close(listenfd); /* close listening socket */
+			str_echo(connfd); /* process the request */
+			exit(0);
+		}
+		close(connfd); /* parent closes connected socket */
+	}
 }
