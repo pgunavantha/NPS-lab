@@ -9,7 +9,7 @@
 #define HELLO_PORT 12345
 #define HELLO_GROUP "225.0.0.37"
 #define MSGBUFSIZE 25
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 struct sockaddr_in addr;
 int fd, nbytes,addrlen;
@@ -52,8 +52,12 @@ exit(1);
 while (1) {
 addrlen=sizeof(addr);
 if ((nbytes=recvfrom(fd,msgbuf,MSGBUFSIZE,0,
-(struct sockaddr *) &addr,&addrlen)) < 0) {
+    (struct sockaddr *) &addr,&addrlen)) < 0) {
 perror("recvfrom");
+exit(0);
+}
 puts(msgbuf);
 }
 }
+
+
