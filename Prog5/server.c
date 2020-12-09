@@ -1,86 +1,111 @@
-/*Implementation of concurrent and iterative echo server using both connection and
-connectionless socket system calls.*/
 #include <stdio.h>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include<fcntl.h>
-#include<unistd.h>
-#define MAX 80
-#define PORT 8080
-#define SA struct sockaddr
-// Function designed for chat between client and server.
-void func(int sockfd)
-{
-char buff[MAX];
-int n;
-// infinite loop for chat
-for (;;) {
-bzero(buff, MAX);
-// read the message from client and copy it in buffer
-read(sockfd, buff, sizeof(buff));
-// print buffer which contains the client contents
-printf("From client: %s\t To client : ", buff);
-bzero(buff, MAX);
-n = 0;
-// copy server message in the buffer
-while ((buff[n++] = getchar()) != '\n')
-;
-// and send that buffer to client
-write(sockfd, buff, sizeof(buff));
-// if msg contains "Exit" then server exit and chat ended.
-if (strncmp("exit", buff, 4) == 0) {
-printf("Server Exit...\n");
-break;
+#include <arpa/inet.h>
+
+int clientCount = 0;
+
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
+struct client{
+
+	int index;
+	int sockID;
+	struct sockaddr_in clientAddr;
+	int len;
+
+};
+
+struct client Client[1024];
+pthread_t thread[1024];
+
+void * doNetworking(void * ClientDetail){
+
+	struct client* clientDetail = (struct client*) ClientDetail;
+	int index = clientDetail -> index;
+	int clientSocket = clientDetail -> sockID;
+
+	printf("Client %d connected.\n",index + 1);
+
+	while(1){
+
+		char data[1024];
+		int read = recv(clientSocket,data,1024,0);
+		data[read] = '\0';
+
+		char output[1024];
+
+		if(strcmp(data,"LIST") == 0){
+
+			int l = 0;
+
+			for(int i = 0 ; i < clientCount ; i ++){
+
+				if(i != index)
+					l += snprintf(output + l,1024,"Client %d is at socket %d.\n",i + 1,Client[i].sockID);
+
+			}
+
+			send(clientSocket,output,1024,0);
+			continue;
+
+		}
+		if(strcmp(data,"SEND") == 0){
+
+			read = recv(clientSocket,data,1024,0);
+			data[read] = '\0';
+
+			int id = atoi(data) - 1;
+
+			read = recv(clientSocket,data,1024,0);
+			data[read] = '\0';
+
+			send(Client[id].sockID,data,1024,0);			
+
+		}
+
+	}
+
+	return NULL;
+
 }
-}
-}
-// Driver function
-int main()
-{
-int sockfd, connfd, len;
-struct sockaddr_in servaddr, cli;
-// socket create and verification
-sockfd = socket(AF_INET, SOCK_STREAM, 0);
-if (sockfd == -1) {
-printf("socket creation failed...\n");
-exit(0);
-}
-else
-printf("Socket successfully created..\n");
-bzero(&servaddr, sizeof(servaddr));
-// assign IP, PORT
-servaddr.sin_family = AF_INET;
-servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-servaddr.sin_port = htons(PORT);
-// Binding newly created socket to given IP and verification
-if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) {
-printf("socket bind failed...\n");
-exit(0);
-}
-else
-printf("Socket successfully binded..\n");
-// Now server is ready to listen and verification
-if ((listen(sockfd, 5)) != 0) {
-printf("Listen failed...\n");
-exit(0);
-}
-else
-printf("Server listening..\n");
-len = sizeof(cli);
-// Accept the data packet from client and verification
-connfd = accept(sockfd, (SA*)&cli, &len);
-if (connfd < 0) {
-printf("server acccept failed...\n");
-exit(0);
-}
-else
-printf("server acccept the client...\n");
-// Function for chatting between client and server
-func(connfd);
-// After chatting close the socket
-close(sockfd);
+
+int main(){
+
+	int serverSocket = socket(PF_INET, SOCK_STREAM, 0);
+
+	struct sockaddr_in serverAddr;
+
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(8080);
+	serverAddr.sin_addr.s_addr = htons(INADDR_ANY);
+
+
+	if(bind(serverSocket,(struct sockaddr *) &serverAddr , sizeof(serverAddr)) == -1) return 0;
+
+	if(listen(serverSocket,1024) == -1) return 0;
+
+	printf("Server started listenting on port 8080 ...........\n");
+
+	while(1){
+
+		Client[clientCount].sockID = accept(serverSocket, (struct sockaddr*) &Client[clientCount].clientAddr, &Client[clientCount].len);
+		Client[clientCount].index = clientCount;
+
+		pthread_create(&thread[clientCount], NULL, doNetworking, (void *) &Client[clientCount]);
+
+		clientCount ++;
+ 
+	}
+
+	for(int i = 0 ; i < clientCount ; i ++)
+		pthread_join(thread[i],NULL);
+
 }
