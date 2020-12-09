@@ -1,61 +1,69 @@
-/*Implementation of concurrent and iterative echo server using both connection and
-connectionless socket system calls.*/
-#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
-#include<unistd.h>
-#include<arpa/inet.h>
-#define MAX 80
-#define PORT 8080
-#define SA struct sockaddr
-void func(int sockfd)
-{
-char buff[MAX];
-int n;
-for (;;) {
-bzero(buff, sizeof(buff));
-printf("Enter the string : ");
-n = 0;
-while ((buff[n++] = getchar()) != '\n')
-;
-write(sockfd, buff, sizeof(buff));
-bzero(buff, sizeof(buff));
-read(sockfd, buff, sizeof(buff));
-printf("From Server : %s", buff);
-if ((strncmp(buff, "exit", 4)) == 0) {
-printf("Client Exit...\n");
-break;
+#include <sys/types.h>
+#include <arpa/inet.h>
+
+void * doRecieving(void * sockID){
+
+	int clientSocket = *((int *) sockID);
+
+	while(1){
+
+		char data[1024];
+		int read = recv(clientSocket,data,1024,0);
+		data[read] = '\0';
+		printf(" %s\n",data);
+
+	}
+
 }
-}
-}
-int main()
-{
-int sockfd, connfd;
-struct sockaddr_in servaddr, cli;
-// socket create and varification
-sockfd = socket(AF_INET, SOCK_STREAM, 0);
-if (sockfd == -1) {
-printf("socket creation failed...\n");
-exit(0);
-}
-else
-printf("Socket successfully created..\n");
-bzero(&servaddr, sizeof(servaddr));
-// assign IP, PORT
-servaddr.sin_family = AF_INET;
-servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-servaddr.sin_port = htons(PORT);
-// connect the client socket to server socket
-if (connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) {
-printf("connection with the server failed...\n");
-exit(0);
-}
-else
-printf("connected to the server..\n");
-// function for chat
-func(sockfd);
-// close the socket
-close(sockfd);
+
+int main(){
+
+	int clientSocket = socket(PF_INET, SOCK_STREAM, 0);
+
+	struct sockaddr_in serverAddr;
+
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(8080);
+	serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	if(connect(clientSocket, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) return 0;
+
+	printf("Connection established ............\n");
+
+	pthread_t thread;
+	pthread_create(&thread, NULL, doRecieving, (void *) &clientSocket );
+
+	while(1){
+
+		char input[1024];
+		scanf("%s",input);
+
+		if(strcmp(input,"LIST") == 0){
+
+			send(clientSocket,input,1024,0);
+
+		}
+		if(strcmp(input,"SEND") == 0){
+
+			send(clientSocket,input,1024,0);
+			
+			scanf("%s",input);
+			send(clientSocket,input,1024,0);
+			
+			scanf("%[^\n]s",input);
+			send(clientSocket,input,1024,0);
+
+		}
+
+	}
+
+
 }
