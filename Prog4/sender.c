@@ -8,7 +8,7 @@
 #include<stdlib.h>
 #define HELLO_PORT 12345
 #define HELLO_GROUP "225.0.0.37"
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 struct sockaddr_in addr;
 int fd, cnt;
@@ -34,4 +34,6 @@ exit(1);
 }
 sleep(1);
 }
+return 0;
 }
+
