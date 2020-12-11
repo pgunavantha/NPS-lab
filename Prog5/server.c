@@ -1,111 +1,71 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<sys/stat.h>
+#include<unistd.h>
+#include<stdlib.h>
+#include<stdio.h>
+#include<fcntl.h>
 #include <arpa/inet.h>
+#include<string.h>
 
-int clientCount = 0;
+void str_echo(int connfd)
+{
+      int n;
+      int bufsize = 10240;
+      char *buffer = malloc(bufsize);
+	//printf("inside the function");
+	while((n=recv(connfd, buffer, bufsize, 0))>0) {
+		fputs("client:",stdout);
+    		fputs(buffer,stdout);
+  		fputs("Me:",stdout);
+  if(fgets(buffer,bufsize,stdin)!=NULL)
+	{
+	send(connfd, buffer, sizeof(buffer), 0); 
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-
-struct client{
-
-	int index;
-	int sockID;
-	struct sockaddr_in clientAddr;
-	int len;
-
-};
-
-struct client Client[1024];
-pthread_t thread[1024];
-
-void * doNetworking(void * ClientDetail){
-
-	struct client* clientDetail = (struct client*) ClientDetail;
-	int index = clientDetail -> index;
-	int clientSocket = clientDetail -> sockID;
-
-	printf("Client %d connected.\n",index + 1);
-
-	while(1){
-
-		char data[1024];
-		int read = recv(clientSocket,data,1024,0);
-		data[read] = '\0';
-
-		char output[1024];
-
-		if(strcmp(data,"LIST") == 0){
-
-			int l = 0;
-
-			for(int i = 0 ; i < clientCount ; i ++){
-
-				if(i != index)
-					l += snprintf(output + l,1024,"Client %d is at socket %d.\n",i + 1,Client[i].sockID);
-
-			}
-
-			send(clientSocket,output,1024,0);
-			continue;
-
-		}
-		if(strcmp(data,"SEND") == 0){
-
-			read = recv(clientSocket,data,1024,0);
-			data[read] = '\0';
-
-			int id = atoi(data) - 1;
-
-			read = recv(clientSocket,data,1024,0);
-			data[read] = '\0';
-
-			send(Client[id].sockID,data,1024,0);			
-
-		}
-
+  	}
+bzero(buffer,10240);
+	
+}}
+int main()
+{
+  int cont,listenfd,connfd,addrlen,addrlen2,fd,pid,addrlen3;
+  
+  //char fname[256];
+  struct sockaddr_in address,cli_address;
+  if ((listenfd = socket(AF_INET,SOCK_STREAM,0)) > 0) //sockfd
+    printf("The socket was created\n");
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(16001);
+printf("The address before bind %s  ...\n",inet_ntoa(address.sin_addr) );
+    if (bind(listenfd,(struct sockaddr *)&address,sizeof(address)) == 0)
+    printf("Binding Socket\n");
+	printf("The address after bind %s  ...\n",inet_ntoa(address.sin_addr) ); 
+  
+    listen(listenfd,3);
+     printf("server is listening\n");
+	//server local address
+     getsockname(listenfd,(struct sockaddr *)&address,&addrlen3);
+     printf("The server's local address %s ...and port %d\n",inet_ntoa(address.sin_addr),htons(address.sin_port));
+for(;;){
+    addrlen = sizeof(struct sockaddr_in);
+    connfd = accept(listenfd,(struct sockaddr *)&cli_address,&addrlen);
+    //printf("The address %s  ...\n",inet_ntoa(address.sin_addr) );
+	addrlen2 = sizeof(struct sockaddr_in);
+	int i = getpeername(connfd,(struct sockaddr *)&cli_address,&addrlen);
+        
+            printf("The Client  %s is Connected...on port %d\n",inet_ntoa(cli_address.sin_addr),htons(cli_address.sin_port));	
+    
+     if((pid=fork())==0)
+     {
+	 printf("inside child\n");
+	  close(listenfd);
+	
+	   str_echo(connfd);
+	   exit(0);
 	}
-
-	return NULL;
-
-}
-
-int main(){
-
-	int serverSocket = socket(PF_INET, SOCK_STREAM, 0);
-
-	struct sockaddr_in serverAddr;
-
-	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(8080);
-	serverAddr.sin_addr.s_addr = htons(INADDR_ANY);
-
-
-	if(bind(serverSocket,(struct sockaddr *) &serverAddr , sizeof(serverAddr)) == -1) return 0;
-
-	if(listen(serverSocket,1024) == -1) return 0;
-
-	printf("Server started listenting on port 8080 ...........\n");
-
-	while(1){
-
-		Client[clientCount].sockID = accept(serverSocket, (struct sockaddr*) &Client[clientCount].clientAddr, &Client[clientCount].len);
-		Client[clientCount].index = clientCount;
-
-		pthread_create(&thread[clientCount], NULL, doNetworking, (void *) &Client[clientCount]);
-
-		clientCount ++;
- 
-	}
-
-	for(int i = 0 ; i < clientCount ; i ++)
-		pthread_join(thread[i],NULL);
-
+      
+    close(connfd);}
+    return 0 ;
 }
