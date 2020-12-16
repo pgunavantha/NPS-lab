@@ -1,60 +1,47 @@
 #include<stdio.h>
-int A[10][10], n, d[10], p[10];
-voidBellmanFord(int s){
-	inti,u,v;
-	for(i=1;i<n;i++){
-		for(u=0;u<n;u++){
-			for(v=0;v<n;v++){
-				if(d[v] > d[u] + A[u][v]){
-					d[v] = d[u] + A[u][v];
-					p[v] = u;
-				}
-			}
-		}
-	}
-	for(u=0;u<n;u++){
-		for(v=0;v<n;v++){
-			if(d[v] > d[u] + A[u][v]){
-				printf("Negative Edge");
-			}
-		}
-	}
-}
-
-int main(){
-printf("Enter the no. of vertices : ");
-	scanf("%d",&n);
-	printf("Enter the adjacency matrix\n");
-	inti,j;
-	for(i=0;i<n;i++)
-		for(j=0;j<n;j++)
-			scanf("%d",&A[i][j]);
-		
-	int source;
-	for(source=0;source<n;source++){
-		
-		
-		for(i=0;i<n;i++){
-			d[i] = 999;
-			p[i] = -1;
-		}
-		d[source] = 0;
-		
-		BellmanFord(source);
-		
-		printf("Router %d\n",source);
-		
-		for(i=0;i<n;i++){
-			if(i != source){
-				j = i;
-				while(p[j] != -1){
-					printf("%d <- ",j);
-					j = p[j];
-				}
-			}
-			printf("%d\tCost %d\n\n",source,d[i]);
-		}
-	}
-	
-	return 0;
+struct node
+{
+    unsigned dist[20];
+    unsigned from[20];
+}rt[10];
+int main()
+{
+    int costmat[20][20];
+    int nodes,i,j,k,count=0;
+    printf("\nEnter the number of nodes : ");
+    scanf("%d",&nodes);//Enter the nodes
+    printf("\nEnter the cost matrix :\n");
+    for(i=0;i<nodes;i++)
+    {
+        for(j=0;j<nodes;j++)
+        {
+            scanf("%d",&costmat[i][j]);
+            costmat[i][i]=0;
+            rt[i].dist[j]=costmat[i][j];//initialise the distance equal to cost matrix
+            rt[i].from[j]=j;
+        }
+    }
+        do
+        {
+            count=0;
+            for(i=0;i<nodes;i++)//We choose arbitary vertex k and we calculate the direct distance from the node i to k using the cost matrix
+            //and add the distance from k to node j
+            for(j=0;j<nodes;j++)
+            for(k=0;k<nodes;k++)
+                if(rt[i].dist[j]>costmat[i][k]+rt[k].dist[j])
+                {//We calculate the minimum distance
+                    rt[i].dist[j]=rt[i].dist[k]+rt[k].dist[j];
+                    rt[i].from[j]=k;
+                    count++;
+                }
+        }while(count!=0);
+        for(i=0;i<nodes;i++)
+        {
+            printf("\n\n For router %d\n",i+1);
+            for(j=0;j<nodes;j++)
+            {
+                printf("\t\nnode %d via %d Distance %d ",j+1,rt[i].from[j]+1,rt[i].dist[j]);
+            }
+        }
+    printf("\n\n");
 }
