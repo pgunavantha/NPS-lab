@@ -19,6 +19,10 @@ if ((fd=socket(AF_INET,SOCK_DGRAM,0)) < 0) {
 perror("socket");
 exit(1);
 }
+  else
+    {
+        printf("the socket was created successfully\n");
+    }
 /* set up destination address */
 memset(&addr,0,sizeof(addr));
 addr.sin_family=AF_INET;
