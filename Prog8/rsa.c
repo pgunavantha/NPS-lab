@@ -2,6 +2,7 @@
 #include<math.h>
 #include<string.h>
 #include<unistd.h>
+#include<stdio.h>
 
 long int gcd(long int a, long int b)
 {
@@ -45,15 +46,17 @@ int main()
     long int i, len;
     long int p, q, n, phi, e, d, cipher[50];
     char text[50];
-    print("Enter the text to be encrypted: ");
+    printf("Enter the text to be encrypted: ");
     gets(text);
     len = strlen(text);
     do {
         p = rand() % 30;
     } while (!isprime(p));
+    printf("%d",p);
     do {
         q = rand() % 30;
     } while (!isprime(q));
+    printf("%d",q);
     n = p * q;
     phi = (p - 1) * (q - 1);
     do {
@@ -62,21 +65,23 @@ int main()
     do {
         d = rand() % phi;
     } while (((d * e) % phi) != 1);
-    printf( "Two prime numbers (p and q) are: %d and %d ", &p,&q);    
-    printf( "n(p * q) = %d * %d = %d \n", &p, &q, &(p*q));  
-    printf( "(p - 1) * (q - 1) = %d ", &phi);  
-    printf( "Public key (n, e): (%d , %d)\n ",&n, &e);
-    printf( "Private key (n, d): (%d , %d)\n ",  &n, &d);
+    printf( "Two prime numbers (p and q) are: %d and %d \n", p,q);   
+    int x=p*q; 
+    printf( "n(p * q) = %d * %d = %d \n", p, q, x);  
+    printf( "(p - 1) * (q - 1) = %d \n", phi);  
+    printf( "Public key (n, e): (%d , %d)\n ",n, e);
+    printf( "Private key (n, d): (%d , %d)\n ",  n, d);
     for (i = 0; i < len; i++)
         cipher[i] = encrypt(text[i], n, e);
     printf( "Encrypted message: ");
     for (i = 0; i < len; i++)
-        printf( "%d", &cipher[i]);
+        printf( "%d", cipher[i]);
     for (i = 0; i < len; i++)
         text[i] = decrypt(cipher[i], n, d);
     printf("\n"); 
     printf( "Decrypted message: ");
     for (i = 0; i < len; i++)
-        printf( "%c", &text[i]);
+        printf( "%c", text[i]);
+    printf("\n");
     return 0;
 }
