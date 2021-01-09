@@ -52,11 +52,9 @@ int main()
     do {
         p = rand() % 30;
     } while (!isprime(p));
-    printf("%d",p);
     do {
         q = rand() % 30;
     } while (!isprime(q));
-    printf("%d",q);
     n = p * q;
     phi = (p - 1) * (q - 1);
     do {
