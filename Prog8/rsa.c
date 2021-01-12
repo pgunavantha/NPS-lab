@@ -63,8 +63,9 @@ int main()
     do {
         d = rand() % phi;
     } while (((d * e) % phi) != 1);
-    printf( "Two prime numbers (p and q) are: %d and %d \n", p,q); 
-    printf( "n(p * q) = %d * %d = %d \n", p, q, p*q);  
+    printf( "Two prime numbers (p and q) are: %d and %d \n", p,q);   
+    int x=p*q; 
+    printf( "n(p * q) = %d * %d = %d \n", p, q, x);  
     printf( "(p - 1) * (q - 1) = %d \n", phi);  
     printf( "Public key (n, e): (%d , %d)\n ",n, e);
     printf( "Private key (n, d): (%d , %d)\n ",  n, d);
