@@ -6,27 +6,12 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 
-void str_cli(FILE *fp, int sockfd)
-{
-	int bufsize = 1024;
-	char *buffer = malloc(bufsize);
-
-	while (fgets(buffer, bufsize, fp) != NULL)
-	{
-		send(sockfd, buffer, sizeof(buffer), 0);  
-		if (recv(sockfd, buffer, bufsize, 0) > 0) 
-	    		fputs(buffer, stdout);
-	}
-	
-	printf("\nEOF\n");
-	
-	free(buffer);
-}
-
-
 int main(int argc,char *argv[])
 {
 	int create_socket;
+	int bufsize = 1024;
+	char *buffer = malloc(bufsize);
+	char fname[256];
 	struct sockaddr_in address;
 	
 	if ((create_socket = socket(AF_INET,SOCK_STREAM,0)) > 0)
@@ -41,7 +26,16 @@ int main(int argc,char *argv[])
 	else
 		printf("Error in connect\n");			
 		
-	str_cli(stdin, create_socket);				
-
+	printf("enter the name of the file to be requested : ");
+	scanf("%s", fname);
+	send (create_socket,fname,sizeof(fname),0);
+	printf("request accepted ... receiving file .... \n\n");
+	printf("the contents of the file are\n");
+	uint32_t cont;
+	while((cont = recv(create_socket, buffer, bufsize, 0))>0)
+	{
+		write(1,buffer,cont);
+	}
+	printf("\nEOF\n");
 	return close(create_socket);
 }
